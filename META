@@ -1,0 +1,6 @@
+version = "0.1.0"
+description = "Storage system for RAFT project using RocksDB"
+requires = "raft ocaml-protoc orocksdb"
+archive(byte) = "raft-rocks.cma"
+archive(native) = "raft-rocks.cmxa"
+exists_if = "raft-rocks.cma"
