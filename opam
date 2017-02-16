@@ -22,4 +22,5 @@ depends: [
   "ocamlbuild" {build}
   "ocaml-protoc"
   "raft"
+  "ocplib-endian"
 ]

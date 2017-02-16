@@ -1,11 +1,11 @@
 
 .PHONY: lib.native lib.byte lib.install lib.uninstall clean 
 
-lib.native:
+lib.native: $(OBJ_FILE)
 	$(OCB) $(LIB_NAME).cmxa
 	$(OCB) $(LIB_NAME).cmxs
 
-lib.byte:
+lib.byte: $(OBJ_FILE)
 	$(OCB) $(LIB_NAME).cma
 
 LIB_BUILD     =_build/src/
@@ -17,6 +17,7 @@ LIB_INSTALL  +=$(patsubst %,$(LIB_BUILD)/%.cmo,$(LIB_FILES))
 LIB_INSTALL  +=$(LIB_BUILD)/$(LIB_NAME).cma 
 
 LIB_INSTALL  +=-optional  
+LIB_INSTALL  +=$(OBJ_FILE)
 LIB_INSTALL  +=$(patsubst %,$(LIB_BUILD)/%.cmx,$(LIB_FILES))
 LIB_INSTALL  +=$(patsubst %,$(LIB_BUILD)/%.cmt,$(LIB_FILES))
 LIB_INSTALL  +=$(LIB_BUILD)/$(LIB_NAME).cmxa 

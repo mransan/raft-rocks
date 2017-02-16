@@ -180,18 +180,6 @@ extern "C" value raft_rocks_db_open(value ml_name) {
   CAMLreturn(ml_ret);
 } 
 
-extern "C" value raft_rocks_db_get_name(value ml_db) {
-  CAMLparam1(ml_db);
-  CAMLlocal1(ml_name); 
-
-  std::string const& name = Raft_rocks_db_val(ml_db)->GetName(); 
-  
-  ml_name = caml_alloc_string(name.size());
-  ::memcpy(String_val(ml_name), name.c_str(), name.size());
-
-  CAMLreturn(ml_name);
-}
-
 extern "C" value raft_rocks_db_create_column_family(value ml_db, 
                                                     value ml_name) {
   CAMLparam2(ml_db, ml_name); 
@@ -212,19 +200,6 @@ extern "C" value raft_rocks_db_create_column_family(value ml_db,
   } 
 
   CAMLreturn(ml_cf);
-}
-
-extern "C" value raft_rocks_db_default_column_family_name(value ml_unit) {
-  CAMLparam1(ml_unit); 
-  CAMLlocal1(ml_name);
-  
-  std::size_t default_name_size = rocksdb::kDefaultColumnFamilyName.size(); 
-  ml_name = caml_alloc_string(default_name_size);
-  ::memcpy(String_val(ml_name), 
-           rocksdb::kDefaultColumnFamilyName.c_str(), 
-           default_name_size); 
-
-  CAMLreturn(ml_name);
 }
 
 extern "C" value raft_rocks_db_destroy_column_family(value ml_db, value ml_cf){

@@ -1,0 +1,11 @@
+option (int32_type) = int_t; 
+
+package raft.rocks; 
+
+message Value {
+  required int32 term = 1; 
+  required string id  = 2;
+  required bytes data = 3; 
+  required bool committed = 4; 
+  optional bytes result = 5; 
+}
