@@ -1,7 +1,6 @@
 LIB_NAME=raft-rocks
 
 LIB_FILES+=raft_rocks
-LIB_FILES+=raft_rocks_pb
 
 LIB_DEPS=raft,ocaml-protoc,ocplib-endian
 
