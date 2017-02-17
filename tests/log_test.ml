@@ -33,11 +33,17 @@ let () =
   assert(committed); 
   assert(Some result = result'); 
 
-  Raft_rocks.forward_by_index ~db ~f:(fun log' committed result' -> 
-    assert(log = log'); 
-    assert(committed); 
-    assert(Some result = result'); 
-  ) (); 
+
+  let rec aux = function
+    | Raft_rocks.End -> () 
+    | Raft_rocks.Value ((log', committed, result'), next) -> begin 
+      assert(log = log'); 
+      assert(committed); 
+      assert(Some result = result'); 
+      next () |> aux 
+    end
+  in 
+  Raft_rocks.forward_by_index ~db () |> aux; 
 
   Raft_rocks.delete_by_index ~index:1 ~db (); 
 
@@ -46,8 +52,4 @@ let () =
   | exception Not_found -> ()
   end; 
 
-  Raft_rocks.forward_by_index ~db ~f:(fun _ _ _ -> 
-    assert(false); 
-  ) ();  
-  
   ()

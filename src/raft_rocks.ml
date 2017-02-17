@@ -95,6 +95,9 @@ let add_log ~log ~committed ?result ~db () =
 
   put_value db by_index_cf key value 
 
+type record = Raft_log.log_entry * bool * bytes option
+(** The record stored for each log entry *)
+
 let get_by_index ~index ~db () = 
   let key = make_index_key index in 
   let {db; by_index_cf; _} = db in 
@@ -139,33 +142,37 @@ let delete_by_index ~index ~db () =
   let {db; by_index_cf; _} = db in 
   Ext.db_delete db by_index_cf key 
 
-let forward_by_index ~db ~f () =  
+type iterator = 
+  | Value of record * iterator_k
+  | End 
 
+and iterator_k = (unit -> iterator) 
+
+let rec next it () = 
+  if Ext.iterator_valid it 
+  then begin 
+    let index = 
+      EndianBytes.BigEndian.get_int32 (Ext.iterator_key it) 0 
+      |> Int32.to_int
+    in 
+    let value = 
+      Ext.iterator_value it 
+      |> Pbrt.Decoder.of_bytes 
+      |> Raft_rocks_pb.decode_value 
+    in 
+    let {Raft_rocks_pb.id; term; data; committed; result; } = value in 
+    let log = Raft_log.({index; id; term; data}) in 
+    Ext.iterator_next it; 
+    Value ((log, committed, result), next it)
+  end 
+  else End
+
+let forward_by_index ~db () =  
   let {db; by_index_cf; _} = db in 
   let it = Ext.db_new_iterator db by_index_cf in 
   Ext.iterator_seek_to_first it; 
+  next it ()
 
-  let rec aux () = 
-    if Ext.iterator_valid it 
-    then begin 
-      let index = 
-        EndianBytes.BigEndian.get_int32 (Ext.iterator_key it) 0 
-        |> Int32.to_int
-      in 
-      let value = 
-        Ext.iterator_value it 
-        |> Pbrt.Decoder.of_bytes 
-        |> Raft_rocks_pb.decode_value 
-      in 
-      let {Raft_rocks_pb.id; term; data; committed; result; } = value in 
-      let log = Raft_log.({index; id; term; data}) in 
-      f log committed result; 
-      Ext.iterator_next it; 
-      aux ()
-    end 
-    else ()  
-  in 
-  aux () 
 
 (* 
  * data: term; id; data; committed; result
