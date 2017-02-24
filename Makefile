@@ -8,7 +8,7 @@ ifneq ($(LIB_DEPS),)
 	LIB_DEPS:=-pkgs $(LIB_DEPS)
 endif
 
-OBJ_FILE    = $(PWD)/stubs/raft_rocks_stubs.o
+OBJ_FILE    = $(CURDIR)/stubs/raft_rocks_stubs.o
 
 OCB_INC     = -X stubs -I src -I tests
 
