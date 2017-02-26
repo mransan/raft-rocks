@@ -1,0 +1,7 @@
+version = "0.1.0"
+description = "Storage system for RAFT project using RocksDB"
+requires = "raft ocaml-protoc ocplib-endian"
+archive(byte) = "raft-rocks.cma raft_rocks_stubs.o"
+archive(native) = "raft-rocks.cmxa raft_rocks_stubs.o"
+exists_if = "raft-rocks.cma"
+linkopts = "-cclib -lrocksdb -cclib -lbz2 -cclib -lz -cclib -lsnappy -cclib -lstdc++ -cclib -lpthread"

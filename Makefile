@@ -18,7 +18,9 @@ OCB_LDFLAGS = -lflags $(OBJ_FILE)
 OCB_LDFLAGS+= -lflags "-cclib -lrocksdb "
 OCB_LDFLAGS+= -lflags "-cclib -lbz2 "
 OCB_LDFLAGS+= -lflags "-cclib -lz "
-#OCB_LDFLAGS+= -lflags "-cclib -lzstd"
+ifeq ($(shell uname), Linux)
+  OCB_LDFLAGS+= -lflags "-cclib -lzstd"
+endif
 OCB_LDFLAGS+= -lflags "-cclib -lsnappy"
 OCB_LDFLAGS+= -lflags "-cclib -lstdc++ -cclib -lpthread"
 
