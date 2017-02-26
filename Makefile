@@ -16,7 +16,10 @@ OCB_FLAGS   = -use-ocamlfind $(LIB_DEPS)
 
 OCB_LDFLAGS = -lflags $(OBJ_FILE)
 OCB_LDFLAGS+= -lflags "-cclib -lrocksdb "
-OCB_LDFLAGS+= -lflags "-cclib -lbz2 -cclib -lz -cclib -lzstd -cclib -lsnappy"
+OCB_LDFLAGS+= -lflags "-cclib -lbz2 "
+OCB_LDFLAGS+= -lflags "-cclib -lz "
+#OCB_LDFLAGS+= -lflags "-cclib -lzstd"
+OCB_LDFLAGS+= -lflags "-cclib -lsnappy"
 OCB_LDFLAGS+= -lflags "-cclib -lstdc++ -cclib -lpthread"
 
 OCB         = ocamlbuild $(OCB_INC) $(OCB_FLAGS)
@@ -25,6 +28,7 @@ OCB         = ocamlbuild $(OCB_INC) $(OCB_FLAGS)
 
 test: tests/log_test.ml $(OBJ_FILE)
 	$(OCB) $(OCB_LDFLAGS) log_test.native
+	rm -rf test.rocks
 	export OCAMLRUNPARAM="b" && ./log_test.native 
 
 %.o: %.cpp

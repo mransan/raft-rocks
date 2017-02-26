@@ -72,3 +72,7 @@ and iterator_k = (unit -> iterator)
 val forward_by_index : db : db -> unit -> iterator  
 (** [forward_by_index ~db ()] returns an iterator over all the log entry
     records sorted by index *)
+
+val backward_by_index : db : db -> unit -> iterator  
+(** [backward_by_index ~db ()] returns an iterator over all the log entry
+    records in reverse order of index value*)

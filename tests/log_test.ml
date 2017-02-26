@@ -33,7 +33,6 @@ let () =
   assert(committed); 
   assert(Some result = result'); 
 
-
   let rec aux = function
     | Raft_rocks.End -> () 
     | Raft_rocks.Value ((log', committed, result'), next) -> begin 
@@ -52,4 +51,28 @@ let () =
   | exception Not_found -> ()
   end; 
 
+  let rec aux = function 
+    | 0 -> []
+    | n -> begin
+      let e = {log with 
+        Raft_log.index = n; 
+        Raft_log.id = Printf.sprintf "ID: %i" n; 
+      } in 
+      Raft_rocks.add_log ~log:e ~committed:false ~db (); 
+      e :: (aux (n - 1))
+    end
+  in
+
+  let backward_l = aux 10 in 
+  let rec aux = function
+    | Raft_rocks.End, [] -> ()
+    | Raft_rocks.End, _  -> assert(false) 
+    | Raft_rocks.Value _, [] -> assert(false) 
+    | Raft_rocks.Value ((e, _, _), next), e'::tl -> begin 
+      assert(e = e');
+      aux (next (), tl) 
+    end
+  in
+  aux (Raft_rocks.backward_by_index ~db (), backward_l);
+  aux (Raft_rocks.forward_by_index ~db (), List.rev backward_l);
   ()
