@@ -23,7 +23,6 @@ val add_log :
 (** [add_log ~log ~committed ~db ()] permenantly stores [log] with 
     [committed] attribute. *)
 
-
 val set_committed_by_index : 
   index : int -> 
   db : db -> 
