@@ -116,7 +116,8 @@ extern "C" value raft_rocks_db_open(value ml_name) {
              ml_cf_list_e, // tmp variable for creating pairs 
              ml_ret);      // return value pair of db handle and list of cf
 
-  try {
+  rocksdb::Status st;
+  {
     std::string name(String_val(ml_name)); 
 
     rocksdb::DBOptions db_options; 
@@ -124,15 +125,13 @@ extern "C" value raft_rocks_db_open(value ml_name) {
 
     // get the names of column families
     std::vector<std::string> cf_names; 
-    rocksdb::Status st = rocksdb::DB::ListColumnFamilies(db_options, 
-                                                         name, 
-                                                         &cf_names); 
+    st = rocksdb::DB::ListColumnFamilies(db_options, name, &cf_names); 
     if(st.IsIOError()) {
       // looks like the ListColumnFamilies fails if the DB is not created
       // 
       cf_names = std::vector<std::string>(1, rocksdb::kDefaultColumnFamilyName); 
     }
-    else if(! st.ok()) { throw st; }
+    else if(! st.ok()) { goto end; }
 
     // transform names into descriptors
     std::vector<rocksdb::ColumnFamilyDescriptor> cf_descriptors; 
@@ -150,7 +149,7 @@ extern "C" value raft_rocks_db_open(value ml_name) {
                            cf_descriptors, 
                            &cf_handles, 
                            &db);
-    if(! st.ok()) { throw st; } 
+    if(! st.ok()) { goto end; } 
 
     ml_db = raft_rocks_db_alloc(db);
 
@@ -167,8 +166,10 @@ extern "C" value raft_rocks_db_open(value ml_name) {
 
       ml_cf_list = raft_rocks_cons(ml_cf_list, ml_cf_list_e);
     }
+  }
 
-  } catch(rocksdb::Status const& st) {
+end: 
+  if(! st.ok()) {
     std::string msg(st.ToString()); 
     caml_failwith(msg.c_str()); 
   } 
@@ -185,16 +186,18 @@ extern "C" value raft_rocks_db_create_column_family(value ml_db,
   CAMLparam2(ml_db, ml_name); 
   CAMLlocal1(ml_cf); 
 
-  try {
+  rocksdb::Status st;
+  {
     rocksdb::DB* db = Raft_rocks_db_val(ml_db); 
     rocksdb::ColumnFamilyHandle* cf = nullptr;
     rocksdb::ColumnFamilyOptions options;
     std::string name(String_val(ml_name)); 
-    rocksdb::Status st = db->CreateColumnFamily(options, name, &cf); 
-    if(! st.ok()) { throw st; }
+    st = db->CreateColumnFamily(options, name, &cf); 
+    if(! st.ok()) { goto end; }
     ml_cf = raft_rocks_cf_alloc(cf);
   }
-  catch(rocksdb::Status const& st) {
+end:
+  if(! st.ok()) {
     std::string msg(st.ToString()); 
     caml_failwith(msg.c_str()); 
   } 
@@ -205,13 +208,13 @@ extern "C" value raft_rocks_db_create_column_family(value ml_db,
 extern "C" value raft_rocks_db_destroy_column_family(value ml_db, value ml_cf){
   CAMLparam2(ml_db, ml_cf); 
 
-  try {
+  rocksdb::Status st;
+  {
     rocksdb::DB* db = Raft_rocks_db_val(ml_db); 
     rocksdb::ColumnFamilyHandle* cf = Raft_rocks_cf_val(ml_cf); 
     rocksdb::Status st = db->DestroyColumnFamilyHandle(cf); 
-    if(! st.ok()) { throw st; } 
   }
-  catch(rocksdb::Status const& st) {
+  if(! st.ok()) {
     std::string msg(st.ToString()); 
     caml_failwith(msg.c_str()); 
   }
@@ -223,17 +226,17 @@ extern "C" value raft_rocks_db_put(value ml_db, value ml_cf,
                                    value ml_key, value ml_val) {
   CAMLparam4(ml_db, ml_cf, ml_key, ml_val); 
 
-  try {
+  rocksdb::Status st;
+  {
     rocksdb::DB* db = Raft_rocks_db_val(ml_db); 
     rocksdb::ColumnFamilyHandle* cf = Raft_rocks_cf_val(ml_cf); 
     rocksdb::Slice key(String_val(ml_key), caml_string_length(ml_key)); 
     rocksdb::Slice val(String_val(ml_val), caml_string_length(ml_val)); 
     rocksdb::WriteOptions options; 
 
-    rocksdb::Status st = db->Put(options, cf, key, val); 
-    if(! st.ok()) { throw st; }
+    st = db->Put(options, cf, key, val); 
   }
-  catch(rocksdb::Status const& st) {
+  if(! st.ok()) {
     std::string msg(st.ToString());
     caml_failwith(msg.c_str());
   }
@@ -245,19 +248,21 @@ extern "C" value raft_rocks_db_get(value ml_db, value ml_cf, value ml_key) {
   CAMLparam3(ml_db, ml_cf, ml_key); 
   CAMLlocal1(ml_val);
 
-  try {
+  rocksdb::Status st; 
+  {
     rocksdb::DB* db = Raft_rocks_db_val(ml_db); 
     rocksdb::ColumnFamilyHandle* cf = Raft_rocks_cf_val(ml_cf); 
     rocksdb::Slice key(String_val(ml_key), caml_string_length(ml_key)); 
     rocksdb::ReadOptions options; 
 
     std::string val; 
-    rocksdb::Status st = db->Get(options, cf, key, &val); 
-    if(! st.ok()) { throw st; }
+    st = db->Get(options, cf, key, &val); 
+    if(! st.ok()) { goto end; }
     ml_val = caml_alloc_string(val.size()); 
     ::memcpy(String_val(ml_val), val.c_str(), val.size());
   }
-  catch(rocksdb::Status const& st) {
+end: 
+  if(! st.ok()) {
     if(st.IsNotFound()) {
       caml_raise_not_found(); 
     }
@@ -273,16 +278,16 @@ extern "C" value raft_rocks_db_get(value ml_db, value ml_cf, value ml_key) {
 extern "C" value raft_rocks_db_delete(value ml_db, value ml_cf, value ml_key) {
   CAMLparam3(ml_db, ml_cf, ml_key); 
 
-  try {
+  rocksdb::Status st;
+  {
     rocksdb::DB* db = Raft_rocks_db_val(ml_db); 
     rocksdb::ColumnFamilyHandle* cf = Raft_rocks_cf_val(ml_cf); 
     rocksdb::Slice key(String_val(ml_key), caml_string_length(ml_key)); 
     rocksdb::WriteOptions options; 
 
     rocksdb::Status st = db->Delete(options, cf, key); 
-    if(! st.ok()) { throw st; }
   }
-  catch(rocksdb::Status const& st) {
+  if(! st.ok()) {
     std::string msg(st.ToString());
     caml_failwith(msg.c_str());
   }
@@ -322,11 +327,29 @@ extern "C" value raft_rocks_iterator_seek_to_first(value ml_iterator) {
   CAMLreturn(Val_unit);
 }
 
+extern "C" value raft_rocks_iterator_seek_to_last(value ml_iterator) {
+  CAMLparam1(ml_iterator); 
+
+  rocksdb::Iterator* iterator = Raft_rocks_iterator_val(ml_iterator);
+  iterator->SeekToLast();
+
+  CAMLreturn(Val_unit);
+}
+
 extern "C" value raft_rocks_iterator_next(value ml_iterator) {
   CAMLparam1(ml_iterator); 
 
   rocksdb::Iterator* iterator = Raft_rocks_iterator_val(ml_iterator);
   iterator->Next();
+
+  CAMLreturn(Val_unit);
+}
+
+extern "C" value raft_rocks_iterator_prev(value ml_iterator) {
+  CAMLparam1(ml_iterator); 
+
+  rocksdb::Iterator* iterator = Raft_rocks_iterator_val(ml_iterator);
+  iterator->Prev();
 
   CAMLreturn(Val_unit);
 }

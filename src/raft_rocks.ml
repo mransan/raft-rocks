@@ -33,8 +33,14 @@ module Ext = struct
   external iterator_seek_to_first : iterator -> unit 
     = "raft_rocks_iterator_seek_to_first"
   
+  external iterator_seek_to_last : iterator -> unit 
+    = "raft_rocks_iterator_seek_to_last"
+  
   external iterator_next : iterator -> unit 
     = "raft_rocks_iterator_next" 
+  
+  external iterator_prev : iterator -> unit 
+    = "raft_rocks_iterator_prev" 
   
   external iterator_key : iterator -> bytes
     = "raft_rocks_iterator_key" 
@@ -173,6 +179,30 @@ let forward_by_index ~db () =
   Ext.iterator_seek_to_first it; 
   next it ()
 
+let rec prev it () = 
+  if Ext.iterator_valid it 
+  then begin 
+    let index = 
+      EndianBytes.BigEndian.get_int32 (Ext.iterator_key it) 0 
+      |> Int32.to_int
+    in 
+    let value = 
+      Ext.iterator_value it 
+      |> Pbrt.Decoder.of_bytes 
+      |> Raft_rocks_pb.decode_value 
+    in 
+    let {Raft_rocks_pb.id; term; data; committed; result; } = value in 
+    let log = Raft_log.({index; id; term; data}) in 
+    Ext.iterator_prev it; 
+    Value ((log, committed, result), prev it)
+  end 
+  else End
+
+let backward_by_index ~db () =  
+  let {db; by_index_cf; _} = db in 
+  let it = Ext.db_new_iterator db by_index_cf in 
+  Ext.iterator_seek_to_last it; 
+  prev it ()
 
 (* 
  * data: term; id; data; committed; result
